@@ -210,7 +210,7 @@ then
 	
 	if [ -z "$inwait" ]
 	then
-		if [ ! -f $dbDirectory/.queue/push.queue.lock ]
+		if [ ! -f /tmp/push.queue.lock ]
 		then
 			printf "%s\n" "$1" >> $dbDirectory/.queue/push.queue
 			printf "%s %s (%s) password sync scheduled in push.queue for user: %s.\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$1" >> /var/log/googlePasswordSync/logs/passwordSync.log
