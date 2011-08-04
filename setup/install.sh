@@ -637,7 +637,7 @@ then
     then
         userKeySize=1024
     else
-        if [$tmp != 1024 -a $tmp != 2048 -a $tmp != 4096 ]
+        if [ $tmp != 1024 -a $tmp != 2048 -a $tmp != 4096 ]
         then
             userKeySize=1024
         fi
