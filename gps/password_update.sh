@@ -193,11 +193,59 @@ printf "#FIRSTNAME:  %s\n" "`/usr/sbin/admin/tools/googlePasswordSync/ldapinfo.s
 printf "#LASTNAME:   %s\n" "`/usr/sbin/admin/tools/googlePasswordSync/ldapinfo.sh $odmAddress $ldapBase --uid $1 lastname`"  >> $dbDirectory/info/$1.info
 
 #FOR FUTURE USE
-printf "#PASSWDSHA1: %s\n" "`echo $password | openssl dgst -sha1 -hex`"          >> $dbDirectory/info/$1.info
+printf "#PASSWDSHA1: %s\n" "`echo -n $password | openssl dgst -sha1 -hex`"          >> $dbDirectory/info/$1.info
 printf "#CHECKSUM:   %s\n" "`echo $1$2$encPassword$userEmail | openssl md5`"     >> $dbDirectory/info/$1.info
 
 printf "%s %s (%s) finished writing capture files [%s]\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$1" >> /var/log/system.log
 printf "%s %s (%s) password change for user: %s.\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$1" >> /var/log/googlePasswordSync/logs/passwordChange.log
+
+
+#GADS INTEGRATION
+GADS_ENABLED=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_ENABLED`
+if [ $GADS_ENABLED == 1 ]
+then
+    printf "%s %s (%s) Updating GADS LDAP record for: [%s]\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$1" >> /var/log/system.log
+
+    GADS_PASSWORD=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_PASSWORD`
+    GADS_USER=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_USER`
+    GADS_RECORD_NAME=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_RECORD_NAME`
+    adminPrivateKeyFileName=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_PRIVATE_KEY`
+    odmAddress=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync ODM`
+    ldapBase=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync LDAP`
+    
+    #dn: uid=joseph.viscomi,cn=users,dc=myserver,dc=viscomi,dc=cdl
+    gadsDn="cn=users,"
+    gadsSkip="NO"
+    IFS=',' read -ra LDAP_PARTS <<< "$ldapBase"
+    for i in "${LDAP_PARTS[@]}"; do
+        if [ "$gadsSkip" == "YES" ]
+        then
+            gadsSkip="NO"
+        else
+            gadsDn=$gadsDn"${i},"
+        fi
+    done
+
+    gadsDn="${gadsDn%?}"
+
+    printf "%s %s (%s) Adding / modifying the %s LDAP attribute\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$GADS_RECORD_NAME" >> /var/log/system.log
+
+    OD_PASSWORD=`/usr/sbin/admin/tools/googlePasswordSync/crypto.sh --decode $dbDirectory/keys/private/$adminPrivateKeyFileName.pem "$GADS_PASSWORD"`
+    
+    shaUserPasswordHash=`echo -n $password | openssl dgst -sha1 -hex`
+    #ldapModifyResults=`echo "dn: uid=$1,cn=users,$gadsDn\nchangetype: modify\nreplace: $GADS_RECORD_NAME\n$GADS_RECORD_NAME: $shaUserPasswordHash" | ldapmodify -xD uid=$GADS_USER,$gadsDn -w $OD_PASSWORD -v`
+    tmpFileName=`date \"+%b %d %k:%M:%S\"$1 | /usr/bin/openssl dgst -sha1 -hex`
+
+    printf "dn: uid=%s,%s\nchangetype: modify\nreplace: %s\n%s: %s" "$1" "$gadsDn" "$GADS_RECORD_NAME" "$GADS_RECORD_NAME" "$shaUserPasswordHash" > /tmp/$tmpFileName.ldif
+    ldapModifyResults=`ldapmodify -xD uid=$GADS_USER,$gadsDn -w $OD_PASSWORD -v -f /tmp/$tmpFileName.ldif`
+    srm /tmp/$tmpFileName.ldif
+
+    printf "%s %s (%s) LDAP MODIFY RESULTS: \n[%s]\n" "`date \"+%b %d %k:%M:%S\"`" "`hostname | awk -F. '{ print $1}'`" "$0" "$ldapModifyResults" >> /var/log/system.log
+
+fi
+    
+    
+    
 
 
 #HANDELING THE SYNC QUEUE [NEW PASSWORD CHANGE]

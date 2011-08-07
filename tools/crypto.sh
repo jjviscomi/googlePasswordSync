@@ -95,6 +95,36 @@ then
     fi
 fi
 
+if [ "$1" == "--hash" ]
+then
+    #HASH TYPE
+    if [ "$2" == "--sha" -a "$3" == "--file" ]
+    then
+        if [ -f $4 ]
+        then
+            #HASH THE CONTENTS OF THE FILE
+            hash=`echo "$4" | /usr/bin/openssl dgst -sha1 -hex`
+            printf "%s" "$hash"
+            exit 0
+        else
+            printf "%s (%s) Specified file (%s) not found for the hashing process.\n" "`date +%Y:%m:%d:%H:%M:%S`" "$0" "$4" >> /var/log/system.log
+            exit 1
+        fi
+    fi
+
+    if [ "$2" == "--sha" ]
+    then
+        #HASH THE STRING PROVIDED
+        hash=`echo "$3" | /usr/bin/openssl dgst -sha1 -hex`
+        printf "%s" "$hash"
+        exit 0
+    fi
+
+    printf "%s (%s) Specified invalid hash type (%s) for the hashing process.\n" "`date +%Y:%m:%d:%H:%M:%S`" "$0" "$2" >> /var/log/system.log
+    exit 1
+    
+fi
+
 
 ########### GENERATE KEYS #############
 if [ "$1" == "--gen" ]
@@ -126,6 +156,9 @@ printf "\t crypto.sh --decode <path to private key file> --file <path to cipher 
 printf "\t crypto.sh --decode <path to private key file> \"Cipher text to have decoded\"\n\n"
 printf "EXAMPLE (GENERATING KEY PAIRS):\n"
 printf "\t crypto.sh --gen [1024 | 2048 | 4096] <path to private key file> <path to public key file>\n"
+printf "HASHING (SHA1):\n"
+printf "\t crypto.sh --hash --sha \"TEXT TO HASH\"\n"
+printf "\t crypto.sh --hash --sha --file <path to file contents to hash>\n\n"
 
 
 printf "%s (%s) Unknown arguments [ %s %s %s %s ] passed to this script.\n" "`date +%Y:%m:%d:%H:%M:%S`" "$0" "$1" "$2" "$3" "$4" >> /var/log/system.log

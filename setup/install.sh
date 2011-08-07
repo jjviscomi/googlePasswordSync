@@ -20,7 +20,7 @@
 # letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA. #
 ####################################################################################################
 
-VERSION=0.7
+VERSION=0.8
 
 printf "Welcome to the googlePasswordSync utility installer for Apple's Open Directory,\n"
 printf "This is a collection of bash scripts designed to kepp the passwords synced between\n"
@@ -567,6 +567,45 @@ then
     fi
 
     printf "\n"
+    
+    ### GADS COMPATIBILITY MODE ###
+    read -p "googlePasswordSync is now compatablie with GADS, do you want to enable this compatability? [y/N]: " enableGads
+    if [ -z "$enableGads" ]
+    then
+        enableGads="NO"
+    else
+        if [ "$enableGads" == "y" -o "$enableGads" == "Y" -o "$enableGads" == "yes" -o "$enableGads" == "YES" ]
+        then
+            printf "\n"
+            enableGads="YES"
+            read -p "Enter in a OpenDirectory admin account short name, this will be used to modify user records: " odAdmin
+            if [ -z "$odAdmin" ]
+            then
+                printf "Since no Open Directory admin account was given we are disabling GADS compatability mode\n"
+                enableGads="NO"
+            else
+                printf "\n"
+                read -s -p "Enter in the password for $odAdmin: " odAdminPassword
+                if [ -z "$odAdminPassword" ]
+                then
+                    printf "Empty Administrator passwords are not allowed, disabling GADS compatability mode\n"
+                    enableGads="NO"
+                else
+                    printf "\n"
+                    read -p "What is the ldap attribute name you wish to use to store the information in? [pager]: " odRecordName
+                    if [ -z "$odRecordName" ]
+                    then
+                        odRecordName="pager"
+                    fi
+                fi
+            fi
+        else
+            enableGads="NO"
+        fi
+    fi
+    # END GADS #
+
+    printf "\n"
 
     read -p "How often (in seconds) should the googlePasswordSync check for updated/changed passwords updates to your Google Apps Domain? [90]: " syncInterval
     if [ -z "$syncInterval" ]
@@ -576,10 +615,19 @@ then
 
     printf "\n"
 
-    read -p "Do you want googlePasswordSync to sync all accounts to Google APPS that is has registered, even though their was no password change? [Y/n]: " tmp
-    if [ -z "$tmp" ]
+    if [ "$enableGads" == "NO" ]
     then
-        tmp="Y"
+        read -p "Do you want googlePasswordSync to sync all accounts to Google APPS that is has registered, even though their was no password change? [Y/n]: " tmp
+        if [ -z "$tmp" ]
+        then
+            tmp="Y"
+        fi
+    else
+        read -p "Do you want googlePasswordSync to sync all accounts to Google APPS that is has registered, even though their was no password change (since you are using GADS this option is NOT recommended )? [y/N]: " tmp
+        if [ -z "$tmp" ]
+        then
+            tmp="N"
+        fi
     fi
 
     if [ "$tmp" == "Y" -o "$tmp" == "y" -o "$tmp" == "yes" -o "$tmp" == "YES" ]
@@ -846,6 +894,7 @@ then
     #RECORD THE KEYS FILE NAME IN THE PLIST FILE
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_PRIVATE_KEY $adminPrivateKeyFileName
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_PUBLIC_KEY $adminPublicKeyFileName
+    
 
     /usr/sbin/admin/tools/googlePasswordSync/crypto.sh --gen 4096 $dbDirectory/keys/private/$adminPrivateKeyFileName.pem $dbDirectory/keys/public/$adminPublicKeyFileName.pem
     
@@ -855,6 +904,18 @@ then
     ## RECORD THE GAPPS_PASSWORD ##
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_PASSWORD "$encryptedGoogleAccountPassword"
     printf " --> SAVED GOOGLE APPS PASSWORD\n"
+
+    
+    #GADS#
+    if [ "$enableGads" == "YES" ]
+    then
+        encryptedOdAdminPassword="`/usr/sbin/admin/tools/googlePasswordSync/crypto.sh --encode $dbDirectory/keys/public/$adminPublicKeyFileName.pem $odAdminPassword`"
+        defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_PASSWORD "$encryptedOdAdminPassword"
+        defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_USER $odAdmin
+        defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_RECORD_NAME $odRecordName
+        printf " --> SAVED GADS INFORMATION\n"
+    fi
+    #END GADS#
 
 
     #RECORD THE REST OF THE SETTINGS
@@ -874,7 +935,9 @@ then
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_GLOBAL_SYNC_INTERVAL $globalSync
     printf " --> SAVED GAPPS_GLOBAL_SYNC_INTERVAL\n"
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_SYNC_INTERVAL -int $syncInterval
-    printf " --> GAPPS_SYNC_INTERVAL\n"
+    printf " --> SAVED GAPPS_SYNC_INTERVAL\n"
+    defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GADS_ENABLED -bool $enableGads
+    printf " --> SAVED GADS_ENABLED\n"
     defaults write /Library/Preferences/org.theObfuscated.googlePasswordSync GPS_VERSION $VERSION
     printf " --> SAVED GPS VERSION\n"
 
