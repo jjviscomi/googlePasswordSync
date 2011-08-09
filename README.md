@@ -60,6 +60,7 @@ All running configuration settings are kept in /Library/Preferences/org.theObfus
 **ADDITIONAL TOOLS**
 
 Three additional tools are installed to offer additional functionality:
+
 - /usr/sbin/admin/tools/googlePasswordSync/crypto.sh: Handels key pair generation, encryption/decryption, hashing
 
 - /usr/sbin/admin/tools/googlePasswordSync/ldapinfo.sh: Handels ldap information lookup as well as account status
