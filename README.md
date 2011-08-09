@@ -29,6 +29,7 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 **OPERATIONS**
 
 When a password change event occurs password_update.sh script is executed automatically, this script does the following jobs:
+
 1. Creates an RSA public/private key pair for each user if one does not exist.
 
 2. Creates a user.info file that contains their e-mail, username, password hash, and checksum.
