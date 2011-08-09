@@ -43,6 +43,7 @@ When a password change event occurs password_update.sh script is executed automa
 6. (If enabled) It will modify the users LDAP record to contain a SHA1 hash of the users password so it can be synced using Google Apps Directory Sync (GADS), this is strictly for GADS compatibility and should NOT be enabled unless you require this functionality.
 
 Then every so often (default is 90 seconds, but this is configured during the install) gps.sh runs to see if there are any NEW changes to tell Google Apps about. It is responsible for the following jobs:
+
 1. Checks Google Apps if the specified mail account exists.
 
 2. Creates new google Apps account (if enabled) if it does not already exist.
