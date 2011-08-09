@@ -6,9 +6,9 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 1. Prepare Open Directory, In WGM make sure every user has the full Google Apps e-mail address entered under the info tab, it should be the first and only one listed.
 
-2. Make sure API access in enabled on your Googel Apps Domain.
+2. Make sure API access in enabled on your Google Apps Domain.
 
-3. For every Domain / Organization you wish to sync create admin account that have the same username in Google Apps. For an example, if I have two different domains of @myfirstdomain.org and @myseconddomain.org Then I will create two admin accounts say authUpdater@myfirstdomain.org and authUpdater@myseconddomain.org. They must both have the same password, following this convention keeps everything simple.
+3. For every Domain / Organization you wish to sync create admin account that have the same username in Google Apps. For an example, if I have two different domains of @myfirstdomain.org and @myseconddomain.org Then I will create two admin accounts say authUpdater @ myfirstdomain.org and authUpdater @ myseconddomain.org. They must both have the same password, following this convention keeps everything simple.
 
 4. Make sure you can logon to those domain with the newly created admin accounts, accept the agreements, etc ...
 
@@ -28,14 +28,14 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 **OPERATIONS**
 
-When a password change event occures password_update.sh script is executed automatically, this script does the following jobs:
+When a password change event occurs password_update.sh script is executed automatically, this script does the following jobs:
 1. Creates an RSA public/private key pair for each user if one does not exist.
 
-2. Creates a user.info file that contains thier e-mail, username, password hash, and checksum.
+2. Creates a user.info file that contains their e-mail, username, password hash, and checksum.
 
 3. Creates a user.password file which contains the users encrypted password with the users public key
 
-4. Archives users old files, if they exists and a change has occured.
+4. Archives users old files, if they exists and a change has occurred.
 
 5. Adds the user to the gps.sh sync queues (there are two different ones, one for pushing the changes only and the other pushes all users the system knows about)
 
@@ -47,5 +47,21 @@ Then every so often (default is 90 seconds, but this is configured during the in
 2. Creates new google Apps account (if enabled) if it does not already exist.
 
 3. If the account exists it updates the password to the password it has captured from Open Directory.
+
+
+**TROUBLES SHOOTING**
+
+Because we still are not at version 1, the logging is verbose by default. You can find a lof of information by watching the /var/log/system.log that should clue you into any problems. Also in the /var/log/ there exists application specific log files you can browse.
+
+All running configuration settings are kept in /Library/Preferences/org.theObfuscated.googlePasswordSync.plist
+(BACKUP THIS FILE BEFORE YOU MAKE ANY CHANGES, THE UNINSTALLER NEEDS IT TO DO A PROPER UNINSTALL)
+
+
+**ADDITIONAL TOOLS**
+
+Three additional tools are installed to offer additional functionality:
+/usr/sbin/admin/tools/googlePasswordSync/crypto.sh: handels key pair generation, encryption/decryption, hashing
+/usr/sbin/admin/tools/googlePasswordSync/ldapinfo.sh: handels ldap information lookup as well as account status
+/usr/sbin/admin/tools/googlePasswordSync/Gapps.php: Command line interface to Google Apps
 
 
