@@ -18,7 +18,7 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 7. The install script needs to be run by root so once inside the setup folder run: sudo ./install.sh
 
-8. Watch the output for any errors, assuming there are no errors you should have s successful install, you might need to restart your passwordService or your ODM for the changes to take effect.
+8. Watch the output for any errors, assuming there are no errors you should have s successful install, you might need to restart your passwordService or your ODM for the changes to take effect. 
 
 
 **UNINSTALL INSTRUCTIONS**
@@ -61,7 +61,7 @@ All running configuration settings are kept in /Library/Preferences/org.theObfus
 
 **ADDITIONAL TOOLS**
 
-Three additional tools are installed to offer additional functionality:
+Three additional tools are installed to offer additional functionality, they work completely independent of googlePasswordSync:
 
 - /usr/sbin/admin/tools/googlePasswordSync/crypto.sh: Handels key pair generation, encryption/decryption, hashing
 
@@ -70,4 +70,16 @@ Three additional tools are installed to offer additional functionality:
 - /usr/sbin/admin/tools/googlePasswordSync/Gapps.php: Command line interface to Google Apps
 
 
+**ROAD MAP**
 
+Below is a list of things that still need to be completed for what I would consider the Version 1 Release:
+
+- LDAP user groups to be mirrored to Google Apps as groups (distribution lists), keep group members in sync on Google Apps and LDAP.
+
+- Disable an account in Google Apps if it is disabled in LDAP, and Enable a disabled Google Apps Account if its LDAP status is changed to Enabled.
+
+- Seamless upgrade process from version to version
+
+- Preferences / Property editor
+
+- Archive db and restore db
