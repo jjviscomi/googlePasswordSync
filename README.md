@@ -2,6 +2,10 @@
 
 GooglePasswordSync is a tool designed specifically to provide an easy method of integrating Open Directory and Google Apps. It offers an easy and straight forward install mechanism and a simple and secure implimentation approach that requires no third party services to run.
 
+**REQUIREMENTS**
+
+1. OS X Server 10.5+
+
 **INSTALL INSTRUCTIONS**
 
 1. Prepare Open Directory, In WGM make sure every user has the full Google Apps e-mail address entered under the info tab, it should be the first and only one listed.
