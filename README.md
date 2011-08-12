@@ -18,9 +18,9 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 5. Download the latest zip file of the master brach git repo (this is the most current and stable version) to your Open Directory Master (ODM), it must be installed on your ODM.
 
-6. Unzip the new version, then open Terminal and cd into the setup folder inside the main package folder, you MUST run the install from that directory currently.
+6. Unzip the new version, cd into the newly unzipped folder.
 
-7. The install script needs to be run by root so once inside the setup folder run: sudo ./install.sh
+7. The install script needs to be run by root: sudo ./install.sh
 
 8. Watch the output for any errors, assuming there are no errors you should have s successful install, you might need to restart your passwordService or your ODM for the changes to take effect. 
 
