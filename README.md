@@ -24,6 +24,8 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 8. Watch the output for any errors, assuming there are no errors you should have s successful install, you might need to restart your passwordService or your ODM for the changes to take effect. 
 
+* Special Note: After you create an account you must change the password for this tool to capture the account info, this ONLY happens when a password change occurs NOT on account creation.
+
 
 **UNINSTALL INSTRUCTIONS**
 
