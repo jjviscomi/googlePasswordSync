@@ -60,7 +60,7 @@ Then every so often (default is 90 seconds, but this is configured during the in
 
 **LOG VIEWS**
 
-Below is an example of a successful password_capture.sh process as viewd in the /var/log/system.log file:
+*Below is an example of a successful password_capture.sh process as viewd in the /var/log/system.log file:*
 
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) preparing password capture.
 
@@ -84,10 +84,11 @@ Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) Queuing
 
 Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) adding user to routine push: [a.user]
 
-Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) finished password capture process [a.user]
+Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) finished password cap*ure process [a.user]
 
 
-Below is an example of a successful gps.sh sync process as viewed in the /var/log/system.log file:
+
+*Below is an example of a successful gps.sh sync process as viewed in the /var/log/system.log file:*
 
 Aug 15 13:10:37 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh) sync --update process started.
 
