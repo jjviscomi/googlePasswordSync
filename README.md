@@ -27,7 +27,7 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 **UNINSTALL INSTRUCTIONS**
 
-1. Inside the stup folder is the uninstall.sh script, this does all the cleanup of files and services that were installed for googlePasswordSync, it is imperative you run this when uninstalling the program.
+1. Inside the setup folder is the uninstall.sh script, this does all the cleanup of files and services that were installed for googlePasswordSync, it is imperative you run this when uninstalling the program.
 
 
 **OPERATIONS**
