@@ -61,26 +61,46 @@ Then every so often (default is 90 seconds, but this is configured during the in
 **LOG VIEWS**
 
 Below is an example of a successful password_capture.sh process as viewd in the /var/log/system.log file:
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) preparing password capture.
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) password update detected for LDAP user [a.user].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) database location at [/.secret].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) created database password file [/.secret/vault/a.user.passwd].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) created database info file [/.secret/info/a.user.info].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) missing users public key [/.secret/keys/public/b26812ed4c4ab9f266dba598b80ae4051f32a776.pem].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) missing users private key [/.secret/keys/pprivate/b26812ed4c4ab9f266dba598b80ae4051f32a776.pem].
+
 Aug 15 13:10:28 brehmodm (/usr/sbin/authserver/tools/password_update.sh) encrypted users password.
+
 Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) finished writing capture files [a.user]
+
 Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) Queuing password sync process for user: [a.user]
+
 Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) adding user to routine push: [a.user]
+
 Aug 15 13:10:37 brehmodm (/usr/sbin/authserver/tools/password_update.sh) finished password capture process [a.user]
 
+
 Below is an example of a successful gps.sh sync process as viewed in the /var/log/system.log file:
+
 Aug 15 13:10:37 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh) sync --update process started.
+
 Aug 15 13:11:00 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh) syncing a.user password.
+
 Aug 15 13:11:15 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh) syncing data for Google Apps Account: a.user@theObfuscated.org
+
 Aug 15 13:11:16 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh)  Google Apps account not found for a.user, attempting to create it now.
+
 Aug 15 13:11:22 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh)  successfully Created Google Apps Account [a.user]
+
 Aug 15 13:11:22 brehmodm (/private/etc/org.theObfuscated/googlePasswordSync/gps.sh) Sync --update process finished.
+
 
 **TROUBLES SHOOTING**
 
