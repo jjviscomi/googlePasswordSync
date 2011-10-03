@@ -8,6 +8,8 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 2. User password type must be Open Directory.
 
+3. Length of passwords used must be at least 8 characters.
+
 **INSTALL INSTRUCTIONS**
 
 1. Prepare Open Directory, In WGM make sure every user has the full Google Apps e-mail address entered under the info tab, it should be the first and only one listed.
