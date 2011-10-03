@@ -6,6 +6,8 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 1. OS X Server 10.5+
 
+2. User password type must be Open Directory.
+
 **INSTALL INSTRUCTIONS**
 
 1. Prepare Open Directory, In WGM make sure every user has the full Google Apps e-mail address entered under the info tab, it should be the first and only one listed.
