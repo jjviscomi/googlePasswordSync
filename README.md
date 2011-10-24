@@ -4,7 +4,7 @@ GooglePasswordSync is a tool designed specifically to provide an easy method of 
 
 **REQUIREMENTS**
 
-1. OS X Server 10.5+
+1. OS X Server 10.5 - 10.68 (A known issue has been found with 10.7+, an update is in the works ...)
 
 2. User password type must be Open Directory.
 
