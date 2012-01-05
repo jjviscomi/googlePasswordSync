@@ -38,6 +38,10 @@ STOP=1
 OPENDIRECTORY_MASTER_FQDN=
 OPENDIRECTORY_MASTER_IPADDRESS=
 OPENDIRECTORY_LDAP_SEARCH_BASE=
+OSX_NAME=
+OSX_VERSION=
+OSX_MAJOR=
+OSX_BUILD=
 
 #IS ZEND GDATA LIBRARY INSTALLED YES/NO
 ZEND_GDATA=
@@ -205,6 +209,19 @@ function continueInstall()
     return $?
 }
 
+function getOSInformation(){
+
+    local tmp
+    tmp=`sw_vers`
+
+    OSX_NAME=`echo $tmp | awk '{ printf "%s %s %s", $2, $3, $4 }'`
+    OSX_VERSION=`echo $tmp | awk '{ printf "%s", $6 }'`
+    OSX_MAJOR=`echo $OSX_VERSION | awk -F. '{ printf "%s", $2 }'` 
+    OSX_BUILD=`echo $tmp | awk '{ printf "%s", $8 }'`
+
+    return 0
+}
+
 #PROMPTS FOR THE FQDN OF THE OPEN DIRECTORY MASTER
 function getOpenDirectoryMasterFQDN()
 {
@@ -222,14 +239,19 @@ function getOpenDirectoryMasterFQDN()
     fi
 
     #SET THE OPENDIRECTORY
-    printf "%s" "$tmp"
+    OPENDIRECTORY_MASTER_FQDN=$tmp
+    
+    #CHECK TO SEE IF $tmp == hostname
+    return 0
 
 }
 
 #TAKES A FQDN AND PRINTS ITS IPADDRESS TO STDOUT
 function getIPAddressFromFQDN()
 {
-    printf "%s" "`dig $1 2>&1 | grep -A1 \";; ANSWER SECTION\" | grep $1 | awk '{ print $5 }'`"
+    OPENDIRECTORY_MASTER_IPADDRESS=`dig $1 2>&1 | grep -A1 ";; ANSWER SECTION" | grep $1 | awk '{ printf "%s" $5 }'`
+
+    return 0
 }
 
 #CHECKS THE NETWORK CONNECTION OF THE SPECIFIED ADDRESS
@@ -243,7 +265,7 @@ function checkNetworkConnection()
         printf "  --> CHECKING PROPER DNS SETTINGS FOR: [%s]\n" "$1"
     fi
 
-    ip=`getIPAddressFromFQDN $1`
+    ip=`dig $1 2>&1 | grep -A1 ";; ANSWER SECTION" | grep $1 | awk '{ printf "%s" $5 }'`
 
     if [ -z $ip ]
     then
@@ -320,7 +342,7 @@ function guessLDAPSearchBase()
 
     ldapBaseGuess="${ldapBaseGuess%?}"
 
-    printf "%s" "$ldapBaseGuess"
+    OPENDIRECTORY_LDAP_SEARCH_BASE=$ldapBaseGuess
 
 }
 
@@ -335,7 +357,8 @@ function getLDAPSearchBase()
         read -p "Please enter the base LDAP search path: " tmp
     done
 
-    printf "%s" "$tmp"
+    #//TO DO SET THE GLOBAL VARIABLE INSTEAD OF THE PRINTF
+    OPENDIRECTORY_LDAP_SEARCH_BASE=$tmp
 }
 
 #CHECK TO SEE IF YOU CAN PREFORM A LOOKUP IN LDAP
@@ -541,9 +564,13 @@ function preInstall()
 
 
 
+
+
 ###############################
 ##### START THE INSTALLER #####
 ###############################
+
+# THIS DOES ALL OF THE PRECHECKING AND GATHERS ALL THE SETUP INFO NEEDED BY THE INSTALLER TO PROCEED
 
 #DISPLAY THE INTRO MESSAGE
 welcomeMessage
@@ -553,13 +580,31 @@ continueInstall
 
 DEBUG_MSG "CONTINUE THE INSTALL" $0 $LINENO
 
-OPENDIRECTORY_MASTER_FQDN=`getOpenDirectoryMasterFQDN`
+getOSInformation
+
+DEBUG_MSG "OSX_NAME: $OSX_NAME" $0 $LINENO
+DEBUG_MSG "OSX_VERSION: $OSX_VERSION" $0 $LINENO
+DEBUG_MSG "OSX_MAJOR: $OSX_MAJOR" $0 $LINENO
+DEBUG_MSG "OSX_BUILD: $OSX_BUILD" $0 $LINENO
+
+getOpenDirectoryMasterFQDN
+
 DEBUG_MSG "ODM FQDN: $OPENDIRECTORY_MASTER_FQDN" $0 $LINENO
 
 if [ $STOP == 0 ]
 then
     DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER" $0 $LINENO
     exit 1
+fi
+
+getIPAddressFromFQDN $OPENDIRECTORY_MASTER_FQDN
+
+DEBUG_MSG "ODM IP: $OPENDIRECTORY_MASTER_IPADDRESS" $0 $LINENO
+
+if [ $STOP == 0 ]
+then
+DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+exit 1
 fi
 
 checkNetworkConnection $OPENDIRECTORY_MASTER_FQDN
@@ -570,16 +615,8 @@ then
     exit 1
 fi
 
-OPENDIRECTORY_MASTER_IPADDRESS=`getIPAddressFromFQDN $OPENDIRECTORY_MASTER_FQDN`
-DEBUG_MSG "ODM IP: $OPENDIRECTORY_MASTER_IPADDRESS" $0 $LINENO
 
-if [ $STOP == 0 ]
-then
-    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
-    exit 1
-fi
-
-OPENDIRECTORY_LDAP_SEARCH_BASE=`guessLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN`
+guessLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN
 DEBUG_MSG "LDAP SEARCH BASE GUESS: $OPENDIRECTORY_LDAP_SEARCH_BASE" $0 $LINENO
 
 
@@ -597,8 +634,8 @@ then
     printf "Cannot Connect to ldap://%s\n" "$OPENDIRECTORY_MASTER_FQDN"
     while [ $? != 2 ]
     do
-        OPENDIRECTORY_MASTER_FQDN=`getOpenDirectoryMasterFQDN`
-        OPENDIRECTORY_LDAP_SEARCH_BASE=`getLDAPSearchBase`
+        getOpenDirectoryMasterFQDN
+        getLDAPSearchBase
         checkLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN $OPENDIRECTORY_LDAP_SEARCH_BASE
     done
 fi
@@ -616,7 +653,7 @@ then
     while [ !$? ]
     do
         printf "It seems that the LDAP search base you entered was NOT valid.\n"
-        OPENDIRECTORY_LDAP_SEARCH_BASE=`getLDAPSearchBase`
+        getLDAPSearchBase
         checkLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN $OPENDIRECTORY_LDAP_SEARCH_BASE
         
     done
@@ -659,16 +696,6 @@ fi
 
 
 continueInstall
-
-
-########################
-########################
-#START THE ACTUAL SETUP#
-########################
-########################
-
-
-
 exit 0
 
 
@@ -684,6 +711,12 @@ exit 0
 
 
 
+
+########################
+########################
+#START THE ACTUAL SETUP#
+########################
+########################
 
 #PREFORM THE UPGRADE PROCESS
 if [ -n "$1" -a "$1" == "--upgrade" -a "$completedCheck" == "YES" ]
