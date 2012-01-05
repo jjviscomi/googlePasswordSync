@@ -7,312 +7,682 @@
 # E-Mail: jjviscomi@gmail.com Facebook: (http://www.facebook.com/joe.viscomi)                      #
 # Website: http://www.theObfuscated.org                                                            #
 # Date Last Modified: 7/27/2011.                                                                   #
-# Version: 0.7b
+# Version: 0.8
 #                                                                                                  #
 # Description: This is the installer for googlePasswordSync.                                       #
 #                                                                                                  #
 # Instructions: You must be in the package directory and run this file as root: sudo ./install.sh  #
 #                                                                                                  #
-# Arguments: 1 OPTIONS [--check | --install | --upgrade]                                           #
 #                                                                                                  #
 # This work is licensed under the Creative Commons Attribution-NonCommercial 3.0 Unported License. #
 # To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/3.0/ or send a   #
 # letter to Creative Commons, 444 Castro Street, Suite 900, Mountain View, California, 94041, USA. #
 ####################################################################################################
 
+
+#####    START GLOBAL VARS    #####
+
 VERSION=0.8
+DEBUG=false
 
-printf "Welcome to the googlePasswordSync utility installer for Apple's Open Directory,\n"
-printf "This is a collection of bash scripts designed to kepp the passwords synced between\n"
-printf "your LDAP server and Google APPS Domain.\n"
+#INSTALL ARGS
+INSTALL=
+CHECK=
+UPGRADE=
+VERBOSE=
+QUIET=
+TESTING=
+STOP=1
 
-printf "Requirements:\n"
-printf "\t1. You must have the users actual e-mail address of the Google APPS domain entered under\n"
-printf "\t   the info tab in WGM for each account you wish to sync.\n"
-printf "\t2. You must have API access enabled on your Google APPS domain.\n"
-printf "\t3. You must be root when installing these scripts.\n"
-printf "\t4. You must install this on your Open Directory Master.\n"
-printf "\t5. You must have the account information for a Google APPS user account that can manage\n"
-printf "\t   the domain user accounts.\n"
-printf "\t\t* If you have multipule Google APP domains make sure the managment account you want to\n"
-printf "\t\t* use has the same username and password for each domain.\n"
-printf "\t6. You must be installing this on 10.6 Server or greater.\n"
-printf "\t\t* You also need PHP 5.2 or greater but the previous statement takes care of this.\n"
-printf "\t7. You must have the DNS FQDN of your Open Directory Master.\n"
-printf "\t8. You must know the base LDAP search path for the Open Directory Master.\n\n"
-printf "**** While this script does basic checking and configuration it is not fool proof. ****\n\n"
+#SYSTEM ARGS
+OPENDIRECTORY_MASTER_FQDN=
+OPENDIRECTORY_MASTER_IPADDRESS=
+OPENDIRECTORY_LDAP_SEARCH_BASE=
 
-if [ -z "$1" -o "$1" == "--check" -o "$1" == "--install"  -o "$1" == "--upgrade" ]
-then
+#IS ZEND GDATA LIBRARY INSTALLED YES/NO
+ZEND_GDATA=
+
+#IS THERE A PREVIOUS INSTALATION YES/NO
+PREVIOUS_VERSION=
+
+DB_DIRECTORY=
+GPS_VERSION=
+
+GADS_PASSWORD=
+GADS_USER=
+GADS_RECORD_NAME=
+
+
+
+#####    END GLOBAL VARS    #####
+
+function DEBUG_MSG()
+{
+    if [ $DEBUG == true ]
+    then
+        printf " ** [DEBUG_MSG - %s(%s)]: %s\n" "$2" "$3" "$1"
+    fi
+}
+
+
+#PRINTS OUT HOW TO USE THE INSTALLER
+function usage()
+{
+    printf "Usage: %s [-c | -i | -u] [-q] [-v | -t] [-d]\n\n" "$0"
+
+    printf "This script is used to check, install, or upgrade googlePasswordSync.\n\n"
+
+    printf "OPTIONS:\n"
+    printf " -c      This will inspect the state of the system and see if googlePasswordSync can be successfully\n"
+    printf "         installed and what what needs to be done.\n\n"
+
+    printf " -i      This will install googlePasswordSync, it will overwrite any previous modifications or installations.\n\n"
+
+    printf " -u      This will preform the upgrade process, saving all current states and information of a previous installations.\n\n"
+
+    printf " -v      This will make the installer be verbose.\n\n"
+
+    printf " -q      This will make the installer be as quite as possible, accepting all the defaults.\n\n"
+
+    printf " -t      This will install googlePasswordSync in test mode and cause it to be VERY verbose in the logging\n"
+    printf "         (NOT RECCOMMEND FOR PRODUCTION USE).\n\n"
+
+    printf " -d      This will enable DEBUG MESSAGES TO BE PRINTED DURING INSTALL>\n\n"
+
+}
+
+#SETS UP THE INSTALLER FROM THE PASSED COMMANDLINE ARGS
+while getopts "hciuvqtd" OPTION
+do
+    case $OPTION in 
+        h)
+            usage
+            exit 1
+            ;;
+        c)
+            CHECK="YES"
+            ;;
+        i)
+            INSTALL="YES"
+            ;;
+        u)
+            UPGRADE="YES"
+            ;;
+        v)
+            VERBOSE="YES"
+            ;;
+        q)
+            QUIET="YES"
+            ;;
+        t)  
+            TESTING="YES"
+            ;;
+        d)
+            DEBUG=true
+            ;;
+        \?)
+            usage
+            exit
+            ;;
+    esac
+done        
+
+
+
+
+
+##### START SCRIPT FUNCTIONS #####
+
+
+function welcomeMessage()
+{
+
+    printf "Welcome to the googlePasswordSync utility installer for Apple's Open Directory,\n"
+    printf "This is a collection of bash scripts designed to keep the passwords synced between\n"
+    printf "your LDAP server and Google APPS Domain.\n"
+
+    printf "Requirements:\n"
+    printf "\t1. You must have the users actual e-mail address of the Google APPS domain entered under\n"
+    printf "\t   the info tab in WGM for each account you wish to sync.\n"
+    printf "\t2. You must have API access enabled on your Google APPS domain.\n"
+    printf "\t3. You must be root when installing these scripts.\n"
+    printf "\t4. You must install this on your Open Directory Master.\n"
+    printf "\t5. You must have the account information for a Google APPS user account that can manage\n"
+    printf "\t   the domain user accounts.\n"
+    printf "\t\t* If you have multipule Google APP domains make sure the managment account you want to\n"
+    printf "\t\t* use has the same username and password for each domain.\n"
+    printf "\t6. You must be installing this on 10.58, 10.6, or 10.7 Server or greater.\n"
+    printf "\t\t* You also need PHP 5.2 or greater but the previous statement takes care of this.\n"
+    printf "\t7. You must have the DNS FQDN of your Open Directory Master (NOT A .local).\n"
+    printf "\t8. You must know the base LDAP search path for the Open Directory Master.\n\n"
+    printf "**** While this script does basic checking and configuration it is not fool proof. ****\n\n"
+
+    return 0
+}
+
+function preCheckMessage()
+{
     printf "\nThis installer will now ask some questions and preform some tests to make sure\n"
     printf "everything will be configured correctly and work properly.\n"
     printf "\t\t**** NO MODIFICATIONS TO YOUR COMPUTER WILL BE DONE DURING THIS SEGMENT****\n\n"
-    
-    read -p "Continue? [Y/n]: " tmp
-    if [ -n "$tmp" -a "$tmp" != "Y" -a "$tmp" != "y" ]
+
+    return 0
+}
+
+function yesCheck()
+{
+    if [ "$1" == "Y" -o "$1" == "y" -o "$1" == "YES" -o "$1" == "yes" -o "$1" == "Yes" -o "$1" == "YEs" -o "$1" == "yES" -o "$1" == "yeS" ]
     then
-        printf "\tExiting Install Checker ...\n"
+        return 0
+    fi
+
+    return 1
+}
+
+function continueInstall()
+{
+    local tmp
+    
+    if [ "$QUIET" == "YES" ]
+    then
+        printf "Continue with install? [Y/n]: Y\n"
+        tmp="Y"
+    else
+        read -p "Continue with the install? [Y/n]: " tmp
+    fi
+
+    if [ -z "$tmp" ]
+    then
+        tmp="Y"
+    fi
+
+    yesCheck $tmp
+    if [ $? == 1 ]
+    then
         exit 1
     fi
-    
-    odmConnectionErrors=""
-    ldapSearchErrors=""
-    googleAppsConnectionErrors=""
-    gdataFramworkErrors=""
 
-    read -p "Please enter the FQDN of your Open Directory Master as it is entered into DNS: " odm
-    if [ -z "$odm" ]
+    return $?
+}
+
+#PROMPTS FOR THE FQDN OF THE OPEN DIRECTORY MASTER
+function getOpenDirectoryMasterFQDN()
+{
+    #REQUIRES FQDN OF SERVER TO CHECK
+    local tmp
+    if [ "$QUIET" == "YES" ]
     then
-        printf "\tExiting Install Checker ...\n"
-        exit 1
+        tmp=`hostname`
+        printf "Please enter the FQDN of your Open Directory Master as it is entered into DNS: %s\n" "$tmp"
+    else
+        while [ -z $tmp ]
+        do
+            read -p "Please enter the FQDN of your Open Directory Master as it is entered into DNS: " tmp
+        done
     fi
 
-    #MAKE SURE NETWORK CONNECTIVITY EXISTS TO THE LDAP SERVER
-    printf " --> CHECKING CONNECTION TO OPEN DIRECTORY MASTER: [%s]\n" "$odm"
-    printf "  --> CHECKING PROPER DNS SETTINGS FOR: [%s]\n" "$odm"
-    odmIP=`dig $odm 2>&1 | grep -A1 ";; ANSWER SECTION" | grep $odm | awk '{ print $5 }'`
-    if [ -z "$odmIP" ]
+    #SET THE OPENDIRECTORY
+    printf "%s" "$tmp"
+
+}
+
+#TAKES A FQDN AND PRINTS ITS IPADDRESS TO STDOUT
+function getIPAddressFromFQDN()
+{
+    printf "%s" "`dig $1 2>&1 | grep -A1 \";; ANSWER SECTION\" | grep $1 | awk '{ print $5 }'`"
+}
+
+#CHECKS THE NETWORK CONNECTION OF THE SPECIFIED ADDRESS
+function checkNetworkConnection()
+{
+    local ip
+
+    if [ "$VERBOSE" == "YES" ]
     then
-        odmIP="NOT DETECTED"
+        printf " --> CHECKING CONNECTION TO: [%s]\n" "$1"
+        printf "  --> CHECKING PROPER DNS SETTINGS FOR: [%s]\n" "$1"
     fi
-    printf "  --> DNS REGISTERED LOOKUP IP ADDDRESS: %s\n" "$odmIP"
 
-    printf "  --> CHECKING NETWORK CONNECTION TO: [%s]\n" "$odm"
+    ip=`getIPAddressFromFQDN $1`
+
+    if [ -z $ip ]
+    then
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> UNABLE TO DETERMIN THE IP ADDRESS FOR: %s\n" "$1"
+        fi
+
+        DEBUG_MSG "IP ADDRESS: CANNOT BETERMIN THE IP ADDRESS" $FUNCNAME $LINENO
+        STOP=0
+        return 1
+    fi
+
+    if [ -n $ip ]
+    then
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> DNS REGISTERED LOOKUP IP ADDDRESS: %s\n" "$ip"
+            printf "  --> CHECKING NETWORK CONNECTION TO: [%s]\n" "$1"
+        fi
+        DEBUG_MSG "IP ADDRESS: $ip" $FUNCNAME $LINENO
+    fi
     
-    packet_count=`ping -c4 $odm 2>&1 | grep "4 packets transmitted," | awk '{ print $4}'`
+    #CHECK HOW MANY PACKETS ARE RETURNED FROM 4 ICMP PACKETS
+    packet_count=`ping -c4 $1 2>&1 | grep "4 packets transmitted," | awk '{ print $4}'`
 
-    if [ -n "$packet_count" ]
+    if [ -n $packet_count ]
     then
         if [ $packet_count -eq 4 ]
         then
-            inetStatus="PERFECT CONNECTION"
+            if [ "$VERBOSE" == "YES" ]
+            then
+                printf "  --> NETWORK CONNECTIVITY TEST TO %s IS SUCCESSFULL.\n" "$1"
+            fi
+            DEBUG_MSG "NETWORK CONNECTIVITY TEST TO $1 IS SUCCESSFULL" $FUNCNAME $LINENO
         else
             if [ $packet_count -gt 0 ]
             then
-                inetStatus="CONNECTION ESTABLISHED, BUT PROBLEMS EXIST"
+                if [ "$VERBOSE" == "YES" ]
+                then
+                    printf "  --> NETWORK CONNECTIVITY TEST TO %s DETECTED PROBLEMS.\n" "$1"
+                fi
+                DEBUG_MSG "NETWORK CONNECTIVITY PROBLEMS, PACKET COUNT: $packet_count" $FUNCNAME $LINENO
             else
-                inetStatus="NO NETWORK CONNECTION"
-                odmConnectionErrors=$inetStatus
+                if [ "$VERBOSE" == "YES" ]
+                then
+                    printf "  --> NETWORK CONNECTIVITY TEST TO %s FAILED.\n" "$1"
+                fi
+                DEBUG_MSG "NETWORK CONNECTIVITY FAILURE" $FUNCNAME $LINENO
+                STOP=0
+                return 1
             fi
-            
         fi
     else
-        inetStatus="NO NETWORK CONNECTION"
-        odmConnectionErrors=$inetStatus
-        packet_count=0
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> NETWORK CONNECTIVITY TEST TO %s FAILED.\n" "$1"
+        fi
+        STOP=0
+        return 1
     fi
-    printf "       * CONNECTON RESULT TO %s: %s\n" "$odm" "$inetStatus"
-    
+    return 0
+}
 
+#GUESS WHAT THE CONPUTER LDAP SEARCH BASE IS
+function guessLDAPSearchBase()
+{
     #ATTEMPT TO CONSTRUCT THE LDAP SEARCH PATH
-    ldapBaseGuess=""
-    IFS='.' read -ra LDAP_PARTS <<< "$odm"
+    local ldapBaseGuess=""
+    IFS='.' read -ra LDAP_PARTS <<< "$1"
     for i in "${LDAP_PARTS[@]}"; do 
         ldapBaseGuess=$ldapBaseGuess"dc=${i},"
     done
 
     ldapBaseGuess="${ldapBaseGuess%?}"
+
+    printf "%s" "$ldapBaseGuess"
+
+}
+
+#PROMPT THE USER TO ENTER IN THE LDAP SEARCH BASE
+function getLDAPSearchBase()
+{
+    read -p "Please enter the base LDAP search path: " tmp
+
+    while [ -z $tmp ]
+    do
+        printf "\n"
+        read -p "Please enter the base LDAP search path: " tmp
+    done
+
+    printf "%s" "$tmp"
+}
+
+#CHECK TO SEE IF YOU CAN PREFORM A LOOKUP IN LDAP
+function checkLDAPSearchBase()
+{
+    local ldapconnect=`ldapsearch -xLLL -H ldap://$1 -b $2 2>&1`
+    local noLDAPObject=` echo $ldapconnect | grep "No such object (32)"`
+    local noLDAPConnection=`echo $ldapconnect | grep "Can't contact LDAP server (-1)"`
+
+    if [ -n "$noLDAPConnection" ]
+    then
+        DEBUG_MSG "LDAP UNSUCESSFULLY SEARCHED $1, USING $2: Can't contact LDAP server (-1)" $FUNCNAME $LINENO
+        return 2
+    fi
+
+    if [ -n "$noLDAPObject" ]
+    then
+        DEBUG_MSG "LDAP UNSUCESSFULLY SEARCHED $1, USING $2: No such object (32)" $FUNCNAME $LINENO
+        return 1
+    fi
+
+    DEBUG_MSG "LDAP SUCESSFULLY SEARCHED $1, USING $2" $FUNCNAME $LINENO 
+    return 0
     
-    if [ $packet_count -gt 4 ]
-    then
-        ldapconnect=`ldapsearch -xLLL -H ldap://$odm -b $ldapBaseGuess | grep "No such object (32)"`
-    fi
+}
 
-    if [ -z "$ldapconnect" ]
-    then
-        if [ $packet_count -gt 0 ]
-        then
-            printf " --> AUTO CONSTRUCTED LDAP SEARCH BASE: [ %s ]\n" "$ldapBaseGuess"
-            printf "       * SUCCESSFULLY SEARCHED THE ODM WITH THE PROVIDED INFORMATION\n"
-        else
-            printf " --> AUTO CONSTRUCTED LDAP SEARCH BASE: [ %s ]\n" "$ldapBaseGuess"
-            printf "       * UNSUCCESSFULLY SEARCHED THE ODM: NO NETWORK CONNECTION TO ODM.\n"
-        fi
-    else
-        printf " --> AUTO CONSTRUCTED LDAP SEARCH BASE: [ %s ]\n" "$ldapBaseGuess"
-        printf "       * UNSUCCESSFULLY SEARCHED THE ODM THE LDAP SEARCH BASE MUST BE DIFFERENT\n"
+#CHECK TO SEE IF THE COMPUTER CAN CONNECT TO GOOGLE (BASICALLY SEE IF THERE IS AN INTERNET CONNECTION)
+function checkConnectionToGoogle()
+{
+    local googleIP=`dig mail.google.com 2>&1 | grep -A1 ";; ANSWER SECTION" | grep mail.google.com | awk '{ print $5 }'`
+    DEBUG_MSG "IP ADDRESS FOR MAIL.GOOGLE.COM: $googleIP" $FUNCNAME $LINENO
 
-        read -p "Please enter a proper LDAP search base: " ldapBaseGuess
-        if [ -z "$ldapBaseGuess" ]
-        then
-            printf "\tExiting Install Checker ...\n"
-            exit 1
-        fi
-        
-        if [ -z "$odmConnectionErrors" ]
-        then
-            ldapconnect=`ldapsearch -xLLL -H ldap://$odm -b $ldapBaseGuess | grep "No such object (32)"`
-        fi
-
-        if [ -n "$ldapconnect" ]
-        then
-            if [ -n "$odmConnectionErrors" ]
-            then
-                printf "\tNO CONNECTION TO LDAP TO TEST SEARCH.\n"
-                ldapSearchErrors="UNABLE TO TEST: "$ldapBaseGuess
-            else
-                printf "\tBad LDAP search path.\n"
-                ldapSearchErrors="BAD SEARCH PATH: "$ldapBaseGuess
-            fi
-        fi
-    fi
-
-    ldapsearchbase=$ldapBaseGuess
-
-    #MAKE SURE NETWORK CONNECTIVITY EXISTS TO GOOGLE
-    printf " --> CHECKING CONNECTION TO GOOGLE APPS\n"
-    printf "  --> CHECKING PROPER DNS SETTINGS FOR: [%s]\n" "mail.google.com"
-    googleIP=`dig mail.google.com 2>&1 | grep -A1 ";; ANSWER SECTION" | grep mail.google.com | awk '{ print $5 }'`
     if [ -z "$googleIP" ]
     then
-       googleIP="NOT DETECTED"
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> UNABLE TO DETERMIN IP ADDRESS OF MAIL.GOOGLE.COM\n"
+        fi
+    else
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> DNS REGISTERED LOOKUP IP ADDDRESS: %s\n" "$googleIP"
+        fi
+        DEBUG_MSG "IP ADDRESS FOR MAIL.GOOGLE.COM: $googleIP" $FUNCNAME $LINENO
     fi
-    printf "  --> DNS REGISTERED LOOKUP IP ADDDRESS: %s\n" "$googleIP"
-    packet_count=`ping -c4 mail.google.com 2>&1 | grep "4 packets transmitted," | awk '{ print $4}'`
 
-    
+      
+    packet_count=`ping -c4 mail.google.com 2>&1 | grep "4 packets transmitted," | awk '{ print $4}'`
+    DEBUG_MSG "PACKET COUNT TO MAIL.GOOGLE.COM: $packet_count" $FUNCNAME $LINENO
+
+
     if [ -n "$packet_count" ]
     then
         if [ $packet_count -eq 4 ]
         then
-            inetStatus="PERFECT CONNECTION"
+            if [ "$VERBOSE" == "YES" ]
+            then
+                printf "  --> PERFECT CONNECTION TO MAIL.GOOGLE.COM\n"
+            fi
+            DEBUG_MSG "PERFECT CONNECTION TO MAIL.GOOGLE.COM" $FUNCNAME $LINENO
         else
             if [ $packet_count -gt 0 ]
             then
-                inetStatus="CONNECTION ESTABLISHED, BUT PROBLEMS EXIST"
+                if [ "$VERBOSE" == "YES" ]
+                then
+                    printf "  --> PROBLEMS WITH CONNECTION TO MAIL.GOOGLE.COM\n"
+                fi
+                DEBUG_MSG "PROBLEMS WITH CONNECTION TO MAIL.GOOGLE.COM" $FUNCNAME $LINENO
             else
-                inetStatus="NO NETWORK CONNECTION"
-                googleAppsConnectionErrors=$inetStatus
+                if [ "$VERBOSE" == "YES" ]
+                then
+                    printf "  --> PROBLEMS WITH CONNECTION TO MAIL.GOOGLE.COM\n"
+                fi
+                DEBUG_MSG "PROBLEMS WITH CONNECTION TO MAIL.GOOGLE.COM" $FUNCNAME $LINENO
             fi
-            
+
         fi 
     else
-        inetStatus="NO NETWORK CONNECTION"
-        googleAppsConnectionErrors=$inetStatus
-        
+        if [ "$VERBOSE" == "YES" ]
+        then
+            printf "  --> NO CONNECTION TO MAIL.GOOGLE.COM\n"
+        fi
+        DEBUG_MSG "NO CONNECTION TO MAIL.GOOGLE.COM" $FUNCNAME $LINENO
+        STOP=0
+        return 1
     fi
-    printf "       * CONNECTON RESULT TO GOOGLE APPS: %s\n" "$inetStatus"
 
+    return 0
+}
 
-    
+#CHECK TO SEE IF THE ZEND LIBRARY IS PROPERLY INSTALLED
+function checkForZendGdataLibrary()
+{
     #CHECKING FOR ZEND GDATA FRAMEWORK
     if [ ! -d "/usr/include/php/Zend"  -o ! -d "/usr/include/php/Zend/Gdata" -o ! -f "/usr/include/php/Zend/Gdata/Gapps.php" ]
     then
-        gdataFramworkErrors="MISSING LIBRARY"
-        printf " --> CHECKING FOR GDATA LIBRARY [/usr/include/php/Zend/Gdata/Gapps.php]: NOT FOUND\n"
-    else
-        printf " --> CHECKING FOR GDATA LIBRARY [/usr/include/php/Zend/Gdata/Gapps.php]: FOUND\n"
-    fi
-
-    #SUMMARY
-    printf "\n\n*****\tSUMMARY OF ERRORS:\t*****\n\n"
-    checkErrors=0
-    if [ -n "$odmConnectionErrors" ]
-    then
-        printf "CONNECTON ERRORS TO ODM [%s]: %s\n" "$odm" "$odmConnectionErrors"
-        checkErrors=5
-    else
-        printf "CONNECTON ERRORS TO ODM [%s]: NONE\n" "$odm"
-    fi
-
-    if [ -n "$ldapSearchErrors" ]
-    then
-        printf "LDAP SEARCH ERRORS TO ODM [%s]: %s\n" "$odm" "$ldapSearchErrors"
-        if [ $checkErrors == 5 ]
+        if [ "$VERBOSE" == "YES" ]
         then
-            checkErrors=10
-        else
-            checkErrors=5
+            printf "  --> MISSING ZEND Gdata LIBRARY\n"
         fi
+        DEBUG_MSG "MISSING ZEND Gdata LIBRARY: /usr/include/php/Zend/Gdata/Gapps.php" $FUNCNAME $LINENO
+        return 1
     else
-        printf "LDAP SEARCH ERRORS TO ODM [%s]: NONE\n" "$odm"
-    fi
-
-    if [ -n "$googleAppsConnectionErrors" ]
-    then
-        if [ $checkErrors == 5 ]
+        if [ "$VERBOSE" == "YES" ]
         then
-            checkErrors=10
-        else
-            checkErrors=5
+            printf "  --> FOUND ZEND Gdata LIBRARY\n"
         fi
-        printf "CONNECTON ERRORS TO GOOGLE APPS: %s\n" "$googleAppsConnectionErrors"
-    else
-        printf "LDAP SEARCH ERRORS TO GOOGLE APPS: NONE\n"
+        DEBUG_MSG "FOUND ZEND Gdata LIBRARY: /usr/include/php/Zend/Gdata/Gapps.php" $FUNCNAME $LINENO
+        return 0
     fi
 
-    
+    return 0
+}
 
-    if [ -n "$gdataFramworkErrors" ]
-    then
-        printf "Zend's Gdata LIBRARY: NOT INSTALLED  (WE WILL INSTALL THIS - NOT A BIG DEAL)\n"
-    else
-        printf "Zend's Gdata LIBRARY: INSTALLED\n"
-    fi
-
+#CHECK TO SEE IF GPS WAS INSTALLED BEFORE
+function checkForPreviousInstallation()
+{
     if [ -f /LibraryPreferences/org.theObfuscated.googlePasswordSync ]
     then
         DB_DIRECTORY=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync DB_DIRECTORY`
         GAPPS_GLOBAL_SYNC_FILE=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_GLOBAL_SYNC_FILE`
+        DEBUG_MSG "FOUND PREVIOUS GPS SETTINGS FILE" $FUNCNAME $LINENO
 
-        if [ -f $GAPPS_GLOBAL_SYNC_FILE.plist ]
+        if [ -d $DB_DIRECTORY ]
         then
-            if [ -d $DB_DIRECTORY ]
-            then
-                printf "PREVIOUS INSTALL FOUND (VERSION): %s\n" "`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GPS_VERSION`"
-                if [ $checkErrors == 5 ]
-                then
-                    checkErrors=8
-                else
-                    checkErrors=3
-                fi
-            else
-                printf "PREVIOUS INSTALL FOUND (INCOMPLETE VERSION): %s\n" "`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GPS_VERSION`"
-                if [ $checkErrors == 5 ]
-                then
-                    checkErrors=9
-                else
-                    checkErrors=4
-                fi
-            fi
-            
-        else
-            printf "SOMETHING PREVIOUSLY DETECTED, MIGHT BE OLD OR INCLOMPLETE/DAMAGED INSTALL\n"
-            checkErrors=5
+            GPS_VERSION=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GPS_VERSION`
+            DEBUG_MSG "PREVIOUS VERSION NUMBER: $GPS_VERSION" $FUNCNAME $LINENO
         fi
-        previouslyInstalled="YES"
-    else
-        printf "NO PREVIOUS INSTALLATION FOUND\n"
-        previouslyInstalled="NO"
+
+       
+        return 0
     fi
+    DEBUG_MSG "NO PREVIOUS VERSION DETECTED" $FUNCNAME $LINENO
+    return 1
+}
+
+#SHUTDOWN THE GPS DAEMON
+function stopGooglePasswordSync(){
+
+    local launchDaemon=`launchctl list | grep org.theObfuscated.googlePasswordSync`
+
+    DEBUG_MSG "org.theObfuscated.googlePasswordSync: $launchDaemon" $FUNCNAME $LINENO
     
-    if [ $checkErrors -gt 4 ]
+    if [ -f "/Library/Preferences/org.theObfuscated.googlePasswordSync.plist" ]
     then
-        printf "RECOMENDATION: PLEASE RESOLVE ALL YOUR CONNECTION ISSUES BEFORE COMPLETEING THE INSTALL / UPDATE PROCESS\n"
-        completedCheck="NO"
+        DEBUG_MSG "DETECTED /Library/Preferences/org.theObfuscated.googlePasswordSync.plist" $FUNCNAME $LINENO
+
+        local gapsSyncFile=`defaults read /Library/Preferences/org.theObfuscated.googlePasswordSync GAPPS_GLOBAL_SYNC_FILE`
+
+        DEBUG_MSG "GAPPS_GLOBAL_SYNC_FILE: $gapsSyncFile" $FUNCNAME $LINENO
     else
-        if [ $checkErrors == 4 ]
-        then
-            printf "RECOMENDATION: AN UNINSTALL IS SUGGESTED TO BE PREFORMED FIRS, FOLLOWED BY A CLEAN INSTALL\n"
-            completedCheck="NO"
-        else
-            if [ c$heckErrors == 3 ]
-            then
-                printf "RECOMENDATION: AN UPGRADE IS SUGGESTED AT THIS POINT\n"
-                completedCheck="YES"
-            fi  
-        fi
-
-        if [ $checkErrors -lt 3 ]
-        then
-            printf "RECOMENDATION: PLEASE PREFORM A CLEAN INSTALL AT THIS POINT\n"
-            completedCheck="YES"
-        fi  
+        local gapsSyncFile=""
     fi
-    
 
+    if [ -n "$launchDaemon" ]
+    then
+        DEBUG_MSG "UNLOADING launchd: $launchDaemon" $FUNCNAME $LINENO
+
+        printf "   --> UNLOADING UPDATE LAUNCH DAEMON\n"
+        launchctl unload /Library/LaunchDaemons/org.theObfuscated.googlePasswordSync.plist
+        
+    fi 
+
+    if [ -f $gapsSyncFile.plist ]
+    then
+        DEBUG_MSG "UNLOADING launchd: $gapsSyncFile.plist" $FUNCNAME $LINENO
+
+        printf "   --> UNLOADING SYNC LAUNCH DAEMON\n"
+        launchctl unload $gapsSyncFile.plist
+    fi
+
+    printf "   --> DISSABLING PASSWORD CHANGE CAPTURE\n"
+    #INFORM THE APPLE PASSWORD SERVER TO NOT RUN THE SCRIPT ON PASSWORD CHANGE
+    defaults write /Library/Preferences/com.apple.passwordserver ExternalCommand Disabled
+
+    local checkDisabled=`defaults read /Library/Preferences/com.apple.passwordserver ExternalCommand`
+
+    if [ "$checkDisabled" == "Disabled" ]
+    then
+        DEBUG_MSG "Sucessfully disabled update sync daemon" $FUNCNAME $LINENO
+        printf "   --> SERVICES STOPPED\n"
+        plutil -convert xml1 /Library/Preferences/com.apple.passwordserver.plist
+        return 0
+    else
+        DEBUG_MSG "Update sync daemon still loaded: $checkDisabled" $FUNCNAME $LINENO
+    fi
+
+    plutil -convert xml1 /Library/Preferences/com.apple.passwordserver.plist
+
+    return 1
+}
+
+#CHECK THE COMPATABILITY
+function preInstall()
+{
+
+    DEBUG_MSG "PRE-INSTALL MESSAGE." $FUNCNAME $LINENO
+
+}
+
+
+
+
+
+
+###############################
+##### START THE INSTALLER #####
+###############################
+
+#DISPLAY THE INTRO MESSAGE
+welcomeMessage
+
+#MAKE SURE THEY WANT TO CONTINUE
+continueInstall
+
+DEBUG_MSG "CONTINUE THE INSTALL" $0 $LINENO
+
+OPENDIRECTORY_MASTER_FQDN=`getOpenDirectoryMasterFQDN`
+DEBUG_MSG "ODM FQDN: $OPENDIRECTORY_MASTER_FQDN" $0 $LINENO
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER" $0 $LINENO
+    exit 1
+fi
+
+checkNetworkConnection $OPENDIRECTORY_MASTER_FQDN
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER" $0 $LINENO
+    exit 1
+fi
+
+OPENDIRECTORY_MASTER_IPADDRESS=`getIPAddressFromFQDN $OPENDIRECTORY_MASTER_FQDN`
+DEBUG_MSG "ODM IP: $OPENDIRECTORY_MASTER_IPADDRESS" $0 $LINENO
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+    exit 1
+fi
+
+OPENDIRECTORY_LDAP_SEARCH_BASE=`guessLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN`
+DEBUG_MSG "LDAP SEARCH BASE GUESS: $OPENDIRECTORY_LDAP_SEARCH_BASE" $0 $LINENO
+
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+    exit 1
+fi
+
+checkLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN $OPENDIRECTORY_LDAP_SEARCH_BASE
+
+#MAKE SURE YOU CAN CONNECTO TO THE LDAP SERVER
+if [ $? == 2 ]
+then
+    printf "Cannot Connect to ldap://%s\n" "$OPENDIRECTORY_MASTER_FQDN"
+    while [ $? != 2 ]
+    do
+        OPENDIRECTORY_MASTER_FQDN=`getOpenDirectoryMasterFQDN`
+        OPENDIRECTORY_LDAP_SEARCH_BASE=`getLDAPSearchBase`
+        checkLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN $OPENDIRECTORY_LDAP_SEARCH_BASE
+    done
+fi
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+    exit 1
+fi
+
+#MAKE SURE YOU HAVE THE CORRECT SEARCH BASE
+if [ $? == 1 ]
+then
+    printf "It seems that the LDAP search base cannot be automatically generated.\n"
+    while [ !$? ]
+    do
+        printf "It seems that the LDAP search base you entered was NOT valid.\n"
+        OPENDIRECTORY_LDAP_SEARCH_BASE=`getLDAPSearchBase`
+        checkLDAPSearchBase $OPENDIRECTORY_MASTER_FQDN $OPENDIRECTORY_LDAP_SEARCH_BASE
+        
+    done
+fi
+
+preCheckMessage
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+    exit 1
+fi
     
-fi #END --check
+checkConnectionToGoogle
+
+if [ $STOP == 0 ]
+then
+    DEBUG_MSG "STOP CONDITION TRIGGERED, EXITING INSTALLER." $0 $LINENO
+    exit 1
+fi
+
+checkForZendGdataLibrary
+
+#SET GLOBAL FLAG TO DETERMINE IF WE NEED TO INSTALL ZEND
+if [ $? == 1 ]
+then
+    ZEND_GDATA="NO"
+else
+    ZEND_GDATA="YES"
+fi
+
+checkForPreviousInstallation
+if [ $? == 1 ]
+then
+    PREVIOUS_VERSION="NO"
+else
+    PREVIOUS_VERSION="YES"
+fi
+
+
+
+continueInstall
+
+
+########################
+########################
+#START THE ACTUAL SETUP#
+########################
+########################
+
+
+
+exit 0
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #PREFORM THE UPGRADE PROCESS
@@ -359,25 +729,7 @@ then
         exit 1
     fi
     
-    launchDaemon=`launchctl list | grep org.theObfuscated.googlePasswordSync`
-    if [ -n "$launchDaemon" ]
-    then
-        printf "   --> UNLOADING UPDATE LAUNCH DAEMON\n"
-        launchctl unload /Library/LaunchDaemons/org.theObfuscated.googlePasswordSync.plist
-    fi 
-
-    if [ -f $GAPPS_GLOBAL_SYNC_FILE.plist ]
-    then
-        printf "   --> UNLOADING SYNC LAUNCH DAEMON\n"
-        launchctl unload $GAPPS_GLOBAL_SYNC_FILE.plist
-    fi
-
-    printf "   --> DISSABLING PASSWORD CHANGE CAPTURE\n"
-    #INFORM THE APPLE PASSWORD SERVER TO NOT RUN THE SCRIPT ON PASSWORD CHANGE
-    defaults write /Library/Preferences/com.apple.passwordserver ExternalCommand Disabled
-    plutil -convert xml1 /Library/Preferences/com.apple.passwordserver.plist
-
-    printf "   --> SERVICES STOPPED, BEGINING THE UPDATE PROCESS\n"
+    
     
     printf "   --> UPDATING SCRIPTS\n"
     printf "    --> UPDATING googlePasswordSync TOOLS ...\n"
