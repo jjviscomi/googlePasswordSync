@@ -1,3 +1,9 @@
+**UPDATE...**
+I know many of you have been waiting / requesting an update ... It really is in the works, You should see me pushing code in the next month, it will really refine the code and make it compatible all the way up through 10.8.
+I am looking for testers for 10.8 since I don't run this server os in a ral environment other than my virtual machine.
+Please contact me directly if you are a willing subject!
+
+
 **INTRODUCTION**
 
 GooglePasswordSync is a tool designed specifically to provide an easy method of integrating Open Directory and Google Apps. It offers an easy and straight forward install mechanism and a simple and secure implimentation approach that requires no third party services to run.
