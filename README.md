@@ -1,7 +1,5 @@
 **UPDATE...**
-I know many of you have been waiting / requesting an update ... It really is in the works, You should see me pushing code in the next month, it will really refine the code and make it compatible all the way up through 10.8.
-I am looking for testers for 10.8 since I don't run this server os in a ral environment other than my virtual machine.
-Please contact me directly if you are a willing subject!
+Project is discontinued!
 
 
 **INTRODUCTION**
